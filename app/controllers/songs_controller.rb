@@ -18,6 +18,8 @@ class SongsController < ApplicationController
       @song = @artist.songs.find_by(id: params[:id])
       if @song.nil?
         redirect_to artist_songs_path(@artist), alert: "Song not found"
+      else
+        @song = Song.find(params[:id])
       end
     else
       @song = Song.find(params[:id])
@@ -25,12 +27,20 @@ class SongsController < ApplicationController
   end
 
   def new
-    @song = Song.new
+    if params[:artist_id] && !Artist.exists?(params[:artist_id])
+      redirect_to artists_path, alert: "Artist not found."
+    elsif params[:artist_id]
+      @artist_id_given = true
+      @song = Song.new(artist_id: params[:artist_id])
+    else
+      @artist_id_given = false
+      @song = Song.new
+    end
+
   end
 
   def create
     @song = Song.new(song_params)
-
     if @song.save
       redirect_to @song
     else
@@ -39,10 +49,24 @@ class SongsController < ApplicationController
   end
 
   def edit
-    @song = Song.find(params[:id])
+    if params[:artist_id]
+      @artist_id_given = true
+
+      if !Artist.exists?(params[:artist_id])
+        redirect_to artists_path, alert: "Artist not found."
+      else
+        artist = Artist.find(params[:artist_id])
+        @song = artist.songs.find_by(id: params[:id])
+        redirect_to artist_songs_path(artist), alert: "Song not found." if @song.nil?
+      end
+    else
+      @artist_id_given = false
+      @song = Song.find(params[:id])
+    end
   end
 
   def update
+    binding.pry
     @song = Song.find(params[:id])
 
     @song.update(song_params)
@@ -64,7 +88,6 @@ class SongsController < ApplicationController
   private
 
   def song_params
-    params.require(:song).permit(:title, :artist_name)
+    params.require(:song).permit(:title, :artist_name, :artist_id, :artist_id_given)
   end
 end
-
